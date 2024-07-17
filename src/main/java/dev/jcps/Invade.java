@@ -3,16 +3,18 @@ package dev.jcps;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.DataInputStream;
-import java.net.URL;
-import java.net.URLConnection;
+import java.io.*;
 import java.util.ArrayList;
+import java.util.Properties;
 import java.util.Random;
 
 import static dev.jcps.InvadeConstants.SCORE_DISPLAY_LENGTH;
 
 /**
- *
+ * The main class for the Invade game.
+ * This class extends the Panel class and implements the JavaAppletAdapter interface.
+ * It contains the game logic and rendering code.
+ * <p>See {@link JavaAppletAdapter}</p>
  */
 public class Invade extends Panel implements JavaAppletAdapter {
     int aaa;
@@ -25,7 +27,7 @@ public class Invade extends Panel implements JavaAppletAdapter {
     int baddieDraw;
     int gameSpeed = InvadeConstants.INITIAL_GAME_SPEED;
     String bigString;
-    int nS;
+    int stance;
     int gameStatus = InvadeConstants.STATE_HIGH_SCORES;
     ArrayList<String> script = new ArrayList<>();
     int t1;
@@ -43,10 +45,6 @@ public class Invade extends Panel implements JavaAppletAdapter {
     String typestring;
     int typed;
     int sx;
-    int mousey;
-    int mousex;
-    int omousex;
-    int omousey;
     int bullet;
     int ly;
     int sy;
@@ -55,17 +53,17 @@ public class Invade extends Panel implements JavaAppletAdapter {
     int nWidth;
     int nHeight;
     int ii;
-    String textline;
+    String textLine;
     int iPressed;
-    int[] starx;
-    int[] stary;
+    int[] starX;
+    int[] starY;
     int[] bx;
     int[] by;
     Random rnd;
-    private boolean m_fAllLoaded;
-    private int[] sinx = new int[InvadeConstants.SIN_TABLE_SIZE];
+    private boolean bAllLoaded;
+    private final int[] sinx = new int[InvadeConstants.SIN_TABLE_SIZE];
     private Graphics m_Graphics;
-    private Image[] m_Images = new Image[InvadeConstants.NUM_IMAGES];
+    private final Image[] pImages = new Image[InvadeConstants.NUM_IMAGES];
     private int i;
     private int[] xs;
     private int[] ys;
@@ -73,14 +71,14 @@ public class Invade extends Panel implements JavaAppletAdapter {
     private int[] eys;
     private int[] hxs;
     private int[] hys;
-    private int[] baddies;
-    private int[] baddiex;
-    private int[] baddiey;
-    private int[] downer;
-    private int[] speed;
-    private Image m_image;
-    private Graphics m_g;
-    private Dimension m_dimImage;
+    private final int[] baddies;
+    private final int[] baddiex;
+    private final int[] baddiey;
+    private final int[] downer;
+    private final int[] speed;
+    private Image mImage;
+    private Graphics mG;
+    private Dimension mDimImage;
 
     /**
      *
@@ -100,14 +98,13 @@ public class Invade extends Panel implements JavaAppletAdapter {
         this.downer = new int[InvadeConstants.MAX_BADDIES];
         this.speed = new int[InvadeConstants.MAX_BADDIES];
         this.iPressed = -1;
-        this.starx = new int[InvadeConstants.MAX_STARS];
-        this.stary = new int[InvadeConstants.MAX_STARS];
+        this.starX = new int[InvadeConstants.MAX_STARS];
+        this.starY = new int[InvadeConstants.MAX_STARS];
         this.bx = new int[InvadeConstants.MAX_BULLETS];
         this.by = new int[InvadeConstants.MAX_BULLETS];
     }
 
     /**
-     *
      * @param args command line arguments
      */
     public static void main(String[] args) {
@@ -131,12 +128,12 @@ public class Invade extends Panel implements JavaAppletAdapter {
     }
 
     /**
-     *
      * @param g the specified Graphics window
      */
+    @Override
     public void paint(Graphics g) {
-        if (this.m_image != null) {
-            g.drawImage(this.m_image, 0, 0, null);
+        if (this.mImage != null) {
+            g.drawImage(this.mImage, 0, 0, null);
         }
 
     }
@@ -148,9 +145,9 @@ public class Invade extends Panel implements JavaAppletAdapter {
         int[] stars;
         int it;
         for (this.i = 0; this.i < 30; ++this.i) {
-            this.m_g.drawImage(this.m_Images[4], this.starx[this.i], this.stary[this.i], null);
-            this.stary[this.i]++;
-            stars = this.stary;
+            this.mG.drawImage(this.pImages[4], this.starX[this.i], this.starY[this.i], null);
+            this.starY[this.i]++;
+            stars = this.starY;
             it = this.i;
             stars[it] %= this.nHeight;
             if (this.bx[this.i] != -1) {
@@ -171,7 +168,7 @@ public class Invade extends Panel implements JavaAppletAdapter {
             }
 
             if (this.bx[this.i] != -1) {
-                this.m_g.drawImage(this.m_Images[5], this.bx[this.i], this.by[this.i], null);
+                this.mG.drawImage(this.pImages[5], this.bx[this.i], this.by[this.i], null);
                 stars = this.by;
                 it = this.i;
                 stars[it] -= 4;
@@ -182,9 +179,9 @@ public class Invade extends Panel implements JavaAppletAdapter {
         }
 
         if (this.baddieDraw == 0) {
-            this.dance = this.sinx[this.nS];
-            ++this.nS;
-            this.nS %= InvadeConstants.BADDIE_HEIGHT;
+            this.dance = this.sinx[this.stance];
+            ++this.stance;
+            this.stance %= InvadeConstants.BADDIE_HEIGHT;
         }
 
         ++this.baddieDraw;
@@ -192,7 +189,7 @@ public class Invade extends Panel implements JavaAppletAdapter {
 
         for (this.i = 0; this.i < InvadeConstants.MAX_BADDIES; ++this.i) {
             if (this.baddies[this.i] == 1) {
-                this.m_g.drawImage(this.m_Images[6], this.baddiex[this.i] + this.dance,
+                this.mG.drawImage(this.pImages[6], this.baddiex[this.i] + this.dance,
                         this.baddiey[this.i] + this.downer[this.i], null);
                 if (this.baddiey[this.i] + this.downer[this.i] > this.nHeight) {
                     this.baddiey[this.i] = InvadeConstants.BADDIE_INITIAL_Y2;
@@ -204,15 +201,15 @@ public class Invade extends Panel implements JavaAppletAdapter {
                 if (this.baddiex[this.i] + this.dance > this.sx &&
                         this.baddiex[this.i] + this.dance < this.sx + InvadeConstants.PLAYER_WIDTH &&
                         this.baddiey[this.i] + this.downer[this.i] + InvadeConstants.BADDIE_HEIGHT > this.sy &&
-                        this.baddiey[this.i] + this.downer[this.i] +  InvadeConstants.BADDIE_HEIGHT < this.sy + InvadeConstants.PLAYER_HEIGHT &&
+                        this.baddiey[this.i] + this.downer[this.i] + InvadeConstants.BADDIE_HEIGHT < this.sy + InvadeConstants.PLAYER_HEIGHT &&
                         this.baddies[this.i] != -1) {
                     this.gameStatus = InvadeConstants.STATE_GAME_OVER;
                 }
 
                 if (this.baddiex[this.i] + this.dance + 25 > this.sx &&
                         this.baddiex[this.i] + this.dance + 25 < this.sx + InvadeConstants.PLAYER_WIDTH &&
-                        this.baddiey[this.i] + this.downer[this.i] + InvadeConstants.BADDIE_HEIGHT  > this.sy &&
-                        this.baddiey[this.i] + this.downer[this.i] + InvadeConstants.BADDIE_HEIGHT  < this.sy + InvadeConstants.PLAYER_HEIGHT &&
+                        this.baddiey[this.i] + this.downer[this.i] + InvadeConstants.BADDIE_HEIGHT > this.sy &&
+                        this.baddiey[this.i] + this.downer[this.i] + InvadeConstants.BADDIE_HEIGHT < this.sy + InvadeConstants.PLAYER_HEIGHT &&
                         this.baddies[this.i] != -1) {
                     this.gameStatus = InvadeConstants.STATE_GAME_OVER;
                 }
@@ -241,11 +238,11 @@ public class Invade extends Panel implements JavaAppletAdapter {
             }
         }
 
-        this.m_g.drawImage(this.m_Images[this.aaa], this.sx, this.sy, null);
+        this.mG.drawImage(this.pImages[this.aaa], this.sx, this.sy, null);
         ++this.aaa;
         this.aaa %= 4;
-        this.m_g.setColor(new Color(255, 71, 84));
-        this.m_g.drawString(" Score : " + this.score + "    Level : " + this.level, 0, 10);
+        this.mG.setColor(new Color(255, 71, 84));
+        this.mG.drawString(" Score : " + this.score + "    Level : " + this.level, 0, 10);
     }
 
     /**
@@ -260,62 +257,45 @@ public class Invade extends Panel implements JavaAppletAdapter {
      * used for the high scores and names.
      */
     public void loadscores() {
-        try {
-            // Open a connection to the scores.txt file
-            URLConnection connection = (new URL((URL) this.getCodeBase(), InvadeConstants.SCORES_FILE)).openConnection();
-            DataInputStream stream = new DataInputStream(connection.getInputStream());
+        String filePath = "scores.txt";  // Adjust this path as needed
+        Properties scores = new Properties();
 
-            while ((this.textline = stream.readLine()) != null) {
-                // TODO: work out score loading
-                this.script.add(this.textline.trim());
-            }
-        } catch (Exception e) {
-            // If an exception occurs, clear the script and add a default message
-            this.script.clear();
-            this.script.add("Could not retrieve script.");
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            scores.load(reader);
+        } catch (IOException e) {
+            System.err.println("Error loading scores: " + e.getMessage());
         }
 
-        // Get the first line of the script as a single string
-        this.bigString = this.script.get(0);
-        this.script.clear();
+        for (int i = 0; i < 10; i++) {
+            String key = "score" + i;
+            String entry = scores.getProperty(key, "Your name?=0");
+            String[] parts = entry.split("=");
 
-        String xscore = "";
-        for (int k = 0; k < 10; k++) {
-            try {
-                // Extract the name from the string (up to 9 characters)
-                this.highNames[k] = this.bigString.length() < 15 ? "Your name?" :
-                        this.bigString.substring(k * 15, k * 15 + 9);
-            } catch (Exception e) {
-                this.highNames[k] = "Your name?";
-            }
-            try {
-                // Extract the score from the string (up to 5 digits)
-                xscore = this.bigString.substring(k * 15 + 9, k * 15 + 14);
-            } catch (Exception e) {
-                xscore = "";
-            }
-            try {
-                // Parse the score as an integer
-                this.highScores[k] = Integer.parseInt(xscore.trim());
-            } catch (NumberFormatException e) {
-                this.highScores[k] = 0;
+            if (parts.length == 2) {
+                highNames[i] = parts[0].trim();
+                try {
+                    highScores[i] = Integer.parseInt(parts[1].trim());
+                } catch (NumberFormatException e) {
+                    highScores[i] = 0;
+                }
+            } else {
+                highNames[i] = "Your name?";
+                highScores[i] = 0;
             }
         }
-
     }
 
     /**
-     *
      * @param g the specified Graphics window
      */
     @Override
     public void update(Graphics g) {
-        this.m_g.setColor(new Color(15, 23, 52));
-        this.m_g.fillRect(0, 0, this.nWidth, this.nHeight);
-        if (!this.m_fAllLoaded) {
-            this.m_g.setColor(new Color(255, 71, 84));
-            this.m_g.setFont(this.f2);
-            this.m_g.drawString("Loading graphics...", 20, 20);
+        this.mG.setColor(new Color(15, 23, 52));
+        this.mG.fillRect(0, 0, this.nWidth, this.nHeight);
+        if (!this.bAllLoaded) {
+            this.mG.setColor(new Color(255, 71, 84));
+            this.mG.setFont(this.f2);
+            this.mG.drawString("Loading graphics...", 20, 20);
         } else {
             label59:
             switch (this.gameStatus) {
@@ -348,20 +328,20 @@ public class Invade extends Panel implements JavaAppletAdapter {
                     }
 
                     if (this.gameStatus != InvadeConstants.STATE_NEW_HIGH_SCORE) {
-                        this.m_g.setColor(new Color(255, 71, 84));
-                        this.m_g.setFont(this.f2);
+                        this.mG.setColor(new Color(255, 71, 84));
+                        this.mG.setFont(this.f2);
                         this.wid = this.fm.stringWidth("GAME OVER");
-                        this.m_g.drawString("GAME OVER", (300 - this.wid) / 2, 160);
-                        this.m_g.setFont(this.f);
+                        this.mG.drawString("GAME OVER", (300 - this.wid) / 2, 160);
+                        this.mG.setFont(this.f);
                         this.gameSpeed = InvadeConstants.INITIAL_GAME_SPEED;
                     }
                     break;
                 case InvadeConstants.STATE_LEVEL_COMPLETE:
-                    this.m_g.setColor(new Color(255, 71, 84));
-                    this.m_g.setFont(this.f2);
+                    this.mG.setColor(new Color(255, 71, 84));
+                    this.mG.setFont(this.f2);
                     this.wid = this.fm.stringWidth("LEVEL " + (this.level + 1));
-                    this.m_g.drawString("LEVEL " + (this.level + 1), (300 - this.wid) / 2, 160);
-                    this.m_g.setFont(this.f);
+                    this.mG.drawString("LEVEL " + (this.level + 1), (300 - this.wid) / 2, 160);
+                    this.mG.setFont(this.f);
                     this.i = 0;
 
                     while (true) {
@@ -373,32 +353,32 @@ public class Invade extends Panel implements JavaAppletAdapter {
                         ++this.i;
                     }
                 case InvadeConstants.STATE_NEW_HIGH_SCORE:
-                    this.m_g.setColor(new Color(255, 71, 84));
-                    this.m_g.drawString("A NEW HIGH SCORE", 0, 50);
-                    this.m_g.drawString("TYPE HERE > ", 0, 110);
-                    this.m_g.drawString(" " + this.typestring + "<", 120, 110);
+                    this.mG.setColor(new Color(255, 71, 84));
+                    this.mG.drawString("A NEW HIGH SCORE", 0, 50);
+                    this.mG.drawString("TYPE HERE > ", 0, 110);
+                    this.mG.drawString(" " + this.typestring + "<", 120, 110);
                     break;
                 case InvadeConstants.STATE_HIGH_SCORES:
-                    this.m_g.setColor(new Color(255, 71, 84));
-                    this.m_g.setFont(this.f2);
-                    this.m_g.drawString("HIGH SCORES", 100, 20);
+                    this.mG.setColor(new Color(255, 71, 84));
+                    this.mG.setFont(this.f2);
+                    this.mG.drawString("HIGH SCORES", 100, 20);
                     int counter = 0;
 
                     do {
                         if (counter < 9) {
-                            this.m_g.drawString(" " + (counter + 1) + "  -  " + this.highNames[counter],
+                            this.mG.drawString(" " + (counter + 1) + "  -  " + this.highNames[counter],
                                     80, 60 + counter * 19);
                         } else {
-                            this.m_g.drawString(counter + 1 + "  -  " + this.highNames[counter],
+                            this.mG.drawString(counter + 1 + "  -  " + this.highNames[counter],
                                     75, 60 + counter * 19);
                         }
 
-                        this.m_g.drawString(" - " + this.highScores[counter], 200, 60 + counter * 19);
+                        this.mG.drawString(" - " + this.highScores[counter], 200, 60 + counter * 19);
                         ++counter;
                     } while (counter < 10);
 
-                    this.m_g.drawString("Click to Play", 110, 290);
-                    this.m_g.setFont(this.f);
+                    this.mG.drawString("Click to Play", 110, 290);
+                    this.mG.setFont(this.f);
             }
         }
 
@@ -423,41 +403,41 @@ public class Invade extends Panel implements JavaAppletAdapter {
         Dimension dimension = this.getSize();
         this.nWidth = dimension.width;
         this.nHeight = dimension.height;
-        if (this.m_dimImage == null || this.m_dimImage.width != this.nWidth || this.m_dimImage.height != this.nHeight) {
-            this.m_dimImage = new Dimension(this.nWidth, this.nHeight);
-            this.m_image = this.createImage(this.nWidth, this.nHeight);
-            this.m_g = this.m_image.getGraphics();
+        if (this.mDimImage == null || this.mDimImage.width != this.nWidth || this.mDimImage.height != this.nHeight) {
+            this.mDimImage = new Dimension(this.nWidth, this.nHeight);
+            this.mImage = this.createImage(this.nWidth, this.nHeight);
+            this.mG = this.mImage.getGraphics();
         }
     }
 
     public void run() {
-        if (!this.m_fAllLoaded) {
+        if (!this.bAllLoaded) {
             this.repaint();
             this.m_Graphics = this.getGraphics();
             MediaTracker mediaTracker = new MediaTracker(this);
-            this.m_Images[0] = this.getImage(this.getDocumentBase(), InvadeConstants.PROFILE_IMAGE);
-            mediaTracker.addImage(this.m_Images[0], 0);
-            this.m_Images[1] = this.getImage(this.getDocumentBase(), InvadeConstants.PROFILE2_IMAGE);
-            mediaTracker.addImage(this.m_Images[1], 0);
-            this.m_Images[2] = this.getImage(this.getDocumentBase(), InvadeConstants.PROFILE3_IMAGE);
-            mediaTracker.addImage(this.m_Images[2], 0);
-            this.m_Images[3] = this.getImage(this.getDocumentBase(), InvadeConstants.PROFILE4_IMAGE);
-            mediaTracker.addImage(this.m_Images[3], 0);
-            this.m_Images[4] = this.getImage(this.getDocumentBase(), InvadeConstants.FLAKE_IMAGE);
-            mediaTracker.addImage(this.m_Images[4], 0);
-            this.m_Images[5] = this.getImage(this.getDocumentBase(), InvadeConstants.BULLET_IMAGE);
-            mediaTracker.addImage(this.m_Images[5], 0);
-            this.m_Images[6] = this.getImage(this.getDocumentBase(), InvadeConstants.BADDIE_IMAGE);
-            mediaTracker.addImage(this.m_Images[6], 0);
+            this.pImages[0] = this.getImage(this.getDocumentBase(), InvadeConstants.PROFILE_IMAGE);
+            mediaTracker.addImage(this.pImages[0], 0);
+            this.pImages[1] = this.getImage(this.getDocumentBase(), InvadeConstants.PROFILE2_IMAGE);
+            mediaTracker.addImage(this.pImages[1], 0);
+            this.pImages[2] = this.getImage(this.getDocumentBase(), InvadeConstants.PROFILE3_IMAGE);
+            mediaTracker.addImage(this.pImages[2], 0);
+            this.pImages[3] = this.getImage(this.getDocumentBase(), InvadeConstants.PROFILE4_IMAGE);
+            mediaTracker.addImage(this.pImages[3], 0);
+            this.pImages[4] = this.getImage(this.getDocumentBase(), InvadeConstants.FLAKE_IMAGE);
+            mediaTracker.addImage(this.pImages[4], 0);
+            this.pImages[5] = this.getImage(this.getDocumentBase(), InvadeConstants.BULLET_IMAGE);
+            mediaTracker.addImage(this.pImages[5], 0);
+            this.pImages[6] = this.getImage(this.getDocumentBase(), InvadeConstants.BADDIE_IMAGE);
+            mediaTracker.addImage(this.pImages[6], 0);
 
             try {
                 mediaTracker.waitForAll();
-                this.m_fAllLoaded = !mediaTracker.isErrorAny();
+                this.bAllLoaded = !mediaTracker.isErrorAny();
             } catch (InterruptedException ignored) {
                 // Empty
             }
 
-            if (!this.m_fAllLoaded) {
+            if (!this.bAllLoaded) {
                 this.stop();
                 return;
             }
@@ -478,16 +458,16 @@ public class Invade extends Panel implements JavaAppletAdapter {
         this.totalBaddies = 10;
         this.deadBaddies = 0;
         this.level = 0;
-        this.nS = 0;
+        this.stance = 0;
         int i1 = 0;
 
         do {
-            this.sinx[i1] = InvadeConstants.SIN_TABLE_OFFSET + (short) (Math.sin(this.nS * 3.14159 / 180.0) * InvadeConstants.SIN_TABLE_AMPLITUDE);
-            this.nS += InvadeConstants.SIN_TABLE_ANGLE_INCREMENT;
+            this.sinx[i1] = InvadeConstants.SIN_TABLE_OFFSET + (short) (Math.sin(this.stance * 3.14159 / 180.0) * InvadeConstants.SIN_TABLE_AMPLITUDE);
+            this.stance += InvadeConstants.SIN_TABLE_ANGLE_INCREMENT;
             ++i1;
         } while (i1 <= 40);
 
-        this.nS = 0;
+        this.stance = 0;
         this.dance = 0;
         this.setSize(300, 320);
         this.sx = InvadeConstants.PLAYER_INITIAL_X;
@@ -505,8 +485,8 @@ public class Invade extends Panel implements JavaAppletAdapter {
         }
 
         for (this.i = 0; this.i < 30; ++this.i) {
-            this.starx[this.i] = (int) rnd.nextDouble(this.nWidth);
-            this.stary[this.i] = (int) rnd.nextDouble(this.nHeight);
+            this.starX[this.i] = (int) rnd.nextDouble(this.nWidth);
+            this.starY[this.i] = (int) rnd.nextDouble(this.nHeight);
             this.bx[this.i] = -1;
             this.by[this.i] = -1;
         }
@@ -528,14 +508,14 @@ public class Invade extends Panel implements JavaAppletAdapter {
         }
 
         this.loadscores();
-        this.m_g.setFont(this.f);
+        this.mG.setFont(this.f);
     }
 
+    @Override
     public boolean handleEvent(Event evt) {
         if (evt.id == 503) {
-            this.mousex = evt.x;
             this.sy = evt.y - 15;
-            this.sx = this.mousex - InvadeConstants.PLAYER_HEIGHT;
+            this.sx = evt.x - InvadeConstants.PLAYER_HEIGHT;
             if (this.sx < 0) {
                 this.sx = 0;
             }
@@ -559,6 +539,7 @@ public class Invade extends Panel implements JavaAppletAdapter {
                     if (this.gameStatus == InvadeConstants.STATE_GAME_OVER) {
                         this.score = 0;
                         this.level = 0;
+                        this.gameSpeed = InvadeConstants.INITIAL_GAME_SPEED;
                     } else {
                         ++this.level;
                         if (this.gameSpeed > InvadeConstants.MIN_GAME_SPEED) {
@@ -594,7 +575,8 @@ public class Invade extends Panel implements JavaAppletAdapter {
 
             }
             return true;
-        } else if (evt.id != 401 && evt.id != 1005 && evt.id != 1004 && evt.id != 1006 && evt.id != 1007) {
+        } else if (evt.id != 401 && evt.id != Event.DOWN && evt.id != Event.UP &&
+                evt.id != Event.LEFT && evt.id != Event.RIGHT) {
             return true;
         } else if (evt.key != 10) {
             if (evt.key < 1000 && evt.key != 0) {
@@ -618,33 +600,60 @@ public class Invade extends Panel implements JavaAppletAdapter {
 
             return true;
         } else {
-            this.highNames[this.newHighScore] = this.typestring;
-            this.gameStatus = InvadeConstants.STATE_HIGH_SCORES;
-            this.bigString = "";
-            this.ii = 1;
-
-            for (this.i = 0; this.i < 10; ++this.i) {
-                String scoresText = this.highNames[this.i] + "---------";
-                int sl;
-                String cName = scoresText.substring(0, InvadeConstants.MAX_NAME_LENGTH);
-                this.bigString = this.bigString + cName;
-                scoresText = "00000" + this.highScores[this.i];
-                sl = scoresText.length();
-                cName = scoresText.substring(sl - SCORE_DISPLAY_LENGTH,
-                        sl - SCORE_DISPLAY_LENGTH + SCORE_DISPLAY_LENGTH);
-                this.bigString = this.bigString + cName + this.ii;
-            }
-
-            this.newHighScore = 99;
-            this.score = 0;
-            this.level = 0;
-            this.typestring = "";
-
-            for (this.i = 0; this.i < 30; ++this.i) {
-                this.bx[this.i] = -1;
-            }
-
+            updateHighScores();
             return true;
+        }
+    }
+
+    private void updateHighScores() {
+        try {
+            this.highNames[this.newHighScore] = this.typestring;
+        } catch (Exception e) {
+            // Just a loop fail-safe
+        }
+        this.gameStatus = InvadeConstants.STATE_HIGH_SCORES;
+        this.bigString = "";
+        this.ii = 1;
+        StringBuilder sb = new StringBuilder();
+
+        for (this.i = 0; this.i < 10; ++this.i) {
+            String scoresText = this.highNames[this.i] + "---------";
+            int sl;
+            String cName = scoresText.substring(0, InvadeConstants.MAX_NAME_LENGTH);
+            sb.append(cName);
+            scoresText = "00000" + this.highScores[this.i];
+            sl = scoresText.length();
+            cName = scoresText.substring(sl - SCORE_DISPLAY_LENGTH,
+                    sl - SCORE_DISPLAY_LENGTH + SCORE_DISPLAY_LENGTH);
+            sb.append(cName).append(this.ii);
+        }
+
+        this.bigString = sb.toString();
+        this.newHighScore = 99;
+        this.score = 0;
+        this.level = 0;
+        this.typestring = "";
+
+        for (this.i = 0; this.i < 30; ++this.i) {
+            this.bx[this.i] = -1;
+        }
+        this.savescores();
+    }
+
+    public void savescores() {
+        String filePath = "scores.txt";  // Adjust this path as needed
+        Properties scores = new Properties();
+
+        for (int i = 0; i < 10; i++) {
+            String key = "score" + i;
+            String value = highNames[i] + "=" + highScores[i];
+            scores.setProperty(key, value);
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            scores.store(writer, "High Scores");
+        } catch (IOException e) {
+            System.err.println("Error saving scores: " + e.getMessage());
         }
     }
 }
