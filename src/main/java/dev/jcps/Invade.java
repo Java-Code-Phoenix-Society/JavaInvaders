@@ -3,6 +3,7 @@ package dev.jcps;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.*;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Properties;
@@ -14,9 +15,17 @@ import static dev.jcps.InvadeConstants.SCORE_DISPLAY_LENGTH;
  * The main class for the Invade game.
  * This class extends the Panel class and implements the JavaAppletAdapter interface.
  * It contains the game logic and rendering code.
+ *
  * <p>See {@link JavaAppletAdapter}</p>
  */
-public class Invade extends Panel implements JavaAppletAdapter {
+public class Invade extends Panel implements JavaAppletAdapter, MouseListener, MouseMotionListener, KeyListener {
+    private final int[] sinx = new int[InvadeConstants.SIN_TABLE_SIZE];
+    private final Image[] pImages = new Image[InvadeConstants.NUM_IMAGES];
+    private final int[] baddies;
+    private final int[] baddiex;
+    private final int[] baddiey;
+    private final int[] downer;
+    private final int[] speed;
     int aaa;
     int t;
     int n;
@@ -61,9 +70,7 @@ public class Invade extends Panel implements JavaAppletAdapter {
     int[] by;
     Random rnd;
     private boolean bAllLoaded;
-    private final int[] sinx = new int[InvadeConstants.SIN_TABLE_SIZE];
     private Graphics m_Graphics;
-    private final Image[] pImages = new Image[InvadeConstants.NUM_IMAGES];
     private int i;
     private int[] xs;
     private int[] ys;
@@ -71,11 +78,6 @@ public class Invade extends Panel implements JavaAppletAdapter {
     private int[] eys;
     private int[] hxs;
     private int[] hys;
-    private final int[] baddies;
-    private final int[] baddiex;
-    private final int[] baddiey;
-    private final int[] downer;
-    private final int[] speed;
     private Image mImage;
     private Graphics mG;
     private Dimension mDimImage;
@@ -116,6 +118,9 @@ public class Invade extends Panel implements JavaAppletAdapter {
         frame.setResizable(false);
         frame.setLayout(new BorderLayout());
         frame.add(invade);
+        invade.addMouseListener(invade);
+        invade.addMouseMotionListener(invade);
+        invade.addKeyListener(invade);
         frame.setVisible(true);
         frame.setLocationRelativeTo(null);
 
@@ -266,21 +271,21 @@ public class Invade extends Panel implements JavaAppletAdapter {
             System.err.println("Error loading scores: " + e.getMessage());
         }
 
-        for (int i = 0; i < 10; i++) {
-            String key = "score" + i;
+        for (int l = 0; l < 10; l++) {
+            String key = "score" + l;
             String entry = scores.getProperty(key, "Your name?=0");
             String[] parts = entry.split("=");
 
             if (parts.length == 2) {
-                highNames[i] = parts[0].trim();
+                highNames[l] = parts[0].trim();
                 try {
-                    highScores[i] = Integer.parseInt(parts[1].trim());
+                    highScores[l] = Integer.parseInt(parts[1].trim());
                 } catch (NumberFormatException e) {
-                    highScores[i] = 0;
+                    highScores[l] = 0;
                 }
             } else {
-                highNames[i] = "Your name?";
-                highScores[i] = 0;
+                highNames[l] = "Your name?";
+                highScores[l] = 0;
             }
         }
     }
@@ -292,97 +297,87 @@ public class Invade extends Panel implements JavaAppletAdapter {
     public void update(Graphics g) {
         this.mG.setColor(new Color(15, 23, 52));
         this.mG.fillRect(0, 0, this.nWidth, this.nHeight);
+
         if (!this.bAllLoaded) {
             this.mG.setColor(new Color(255, 71, 84));
             this.mG.setFont(this.f2);
             this.mG.drawString("Loading graphics...", 20, 20);
         } else {
-            label59:
             switch (this.gameStatus) {
                 case InvadeConstants.STATE_PLAYING:
                     this.gameloop();
                     break;
+
                 case InvadeConstants.STATE_GAME_OVER:
                     this.loadscores();
-
-                    for (this.i = 0; this.i < 10; ++this.i) {
-                        if (this.score > this.highScores[this.i]) {
-                            this.newHighScore = this.i;
-                            this.t = this.highScores[this.i];
-                            this.ts = this.highNames[this.i];
-                            this.highScores[this.i] = this.score;
-                            ++this.i;
-
-                            while (this.i < 10) {
-                                this.n = this.highScores[this.i];
-                                this.ns = this.highNames[this.i];
-                                this.highScores[this.i] = this.t;
-                                this.highNames[this.i] = this.ts;
-                                this.t = this.n;
-                                this.ts = this.ns;
-                                ++this.i;
-                            }
-
-                            this.gameStatus = InvadeConstants.STATE_NEW_HIGH_SCORE;
-                        }
-                    }
-
+                    updateHighScores();
                     if (this.gameStatus != InvadeConstants.STATE_NEW_HIGH_SCORE) {
-                        this.mG.setColor(new Color(255, 71, 84));
-                        this.mG.setFont(this.f2);
-                        this.wid = this.fm.stringWidth("GAME OVER");
-                        this.mG.drawString("GAME OVER", (300 - this.wid) / 2, 160);
-                        this.mG.setFont(this.f);
+                        displayGameOver();
                         this.gameSpeed = InvadeConstants.INITIAL_GAME_SPEED;
                     }
                     break;
+
                 case InvadeConstants.STATE_LEVEL_COMPLETE:
-                    this.mG.setColor(new Color(255, 71, 84));
-                    this.mG.setFont(this.f2);
-                    this.wid = this.fm.stringWidth("LEVEL " + (this.level + 1));
-                    this.mG.drawString("LEVEL " + (this.level + 1), (300 - this.wid) / 2, 160);
-                    this.mG.setFont(this.f);
-                    this.i = 0;
-
-                    while (true) {
-                        if (this.i >= 30) {
-                            break label59;
-                        }
-
-                        this.bx[this.i] = -1;
-                        ++this.i;
-                    }
-                case InvadeConstants.STATE_NEW_HIGH_SCORE:
-                    this.mG.setColor(new Color(255, 71, 84));
-                    this.mG.drawString("A NEW HIGH SCORE", 0, 50);
-                    this.mG.drawString("TYPE HERE > ", 0, 110);
-                    this.mG.drawString(" " + this.typestring + "<", 120, 110);
+                    displayLevelComplete();
+                    resetLevel();
                     break;
+
+                case InvadeConstants.STATE_NEW_HIGH_SCORE:
+                    displayNewHighScore();
+                    break;
+
                 case InvadeConstants.STATE_HIGH_SCORES:
-                    this.mG.setColor(new Color(255, 71, 84));
-                    this.mG.setFont(this.f2);
-                    this.mG.drawString("HIGH SCORES", 100, 20);
-                    int counter = 0;
-
-                    do {
-                        if (counter < 9) {
-                            this.mG.drawString(" " + (counter + 1) + "  -  " + this.highNames[counter],
-                                    80, 60 + counter * 19);
-                        } else {
-                            this.mG.drawString(counter + 1 + "  -  " + this.highNames[counter],
-                                    75, 60 + counter * 19);
-                        }
-
-                        this.mG.drawString(" - " + this.highScores[counter], 200, 60 + counter * 19);
-                        ++counter;
-                    } while (counter < 10);
-
-                    this.mG.drawString("Click to Play", 110, 290);
-                    this.mG.setFont(this.f);
+                    displayHighScores();
+                    break;
             }
         }
 
         this.paint(g);
+    }
+    private void displayHighScores() {
+        this.mG.setColor(new Color(255, 71, 84));
+        this.mG.setFont(this.f2);
+        this.mG.drawString("HIGH SCORES", 100, 20);
+
+        for (int i = 0; i < 10; i++) {
+            if (i < 9) {
+                this.mG.drawString(" " + (i + 1) + "  -  " + this.highNames[i], 80, 60 + i * 19);
+            } else {
+                this.mG.drawString((i + 1) + "  -  " + this.highNames[i], 75, 60 + i * 19);
+            }
+            this.mG.drawString(" - " + this.highScores[i], 200, 60 + i * 19);
+        }
+
+        this.mG.drawString("Click to Play", 110, 290);
+        this.mG.setFont(this.f);
+    }
+    private void displayGameOver() {
+        this.mG.setColor(new Color(255, 71, 84));
+        this.mG.setFont(this.f2);
+        this.wid = this.fm.stringWidth("GAME OVER");
+        this.mG.drawString("GAME OVER", (300 - this.wid) / 2, 160);
+        this.mG.setFont(this.f);
+    }
+
+    private void resetLevel() {
+        for (int i = 0; i < 30; i++) {
+            this.bx[i] = -1;
+        }
+    }
+
+    private void displayNewHighScore() {
+        this.mG.setColor(new Color(255, 71, 84));
+        this.mG.drawString("A NEW HIGH SCORE", 0, 50);
+        this.mG.drawString("TYPE HERE > ", 0, 110);
+        this.mG.drawString(" " + this.typestring + "<", 120, 110);
+    }
+
+    private void displayLevelComplete() {
+        this.mG.setColor(new Color(255, 71, 84));
+        this.mG.setFont(this.f2);
+        this.wid = this.fm.stringWidth("LEVEL " + (this.level + 1));
+        this.mG.drawString("LEVEL " + (this.level + 1), (300 - this.wid) / 2, 160);
+        this.mG.setFont(this.f);
     }
 
     /**
@@ -511,98 +506,99 @@ public class Invade extends Panel implements JavaAppletAdapter {
         this.mG.setFont(this.f);
     }
 
-    @Override
-    public boolean handleEvent(Event evt) {
-        if (evt.id == 503) {
-            this.sy = evt.y - 15;
-            this.sx = evt.x - InvadeConstants.PLAYER_HEIGHT;
-            if (this.sx < 0) {
-                this.sx = 0;
-            }
+    public boolean handleMouseEvent(MouseEvent evt) {
+        if (evt.getID() == MouseEvent.MOUSE_MOVED) {
+            this.sy = evt.getY() - 15;
+            this.sx = evt.getX() - InvadeConstants.PLAYER_HEIGHT;
 
-            if (this.sx > this.nWidth - 77) {
-                this.sx = this.nWidth - 77;
-            }
-
-            if (this.sy > this.nHeight - 30) {
-                this.sy = this.nHeight - 30;
-            }
-
-            if (this.sy < InvadeConstants.PLAYER_MIN_Y) {
-                this.sy = InvadeConstants.PLAYER_MIN_Y;
-            }
+            // Bound checking
+            this.sx = Math.max(0, Math.min(this.sx, this.nWidth - 77));
+            this.sy = Math.max(InvadeConstants.PLAYER_MIN_Y, Math.min(this.sy, this.nHeight - 30));
 
             return true;
-        } else if (evt.id == 501) {
-            if (this.gameStatus != InvadeConstants.STATE_NEW_HIGH_SCORE) {
-                if (this.gameStatus != InvadeConstants.STATE_PLAYING) {
-                    if (this.gameStatus == InvadeConstants.STATE_GAME_OVER) {
-                        this.score = 0;
-                        this.level = 0;
-                        this.gameSpeed = InvadeConstants.INITIAL_GAME_SPEED;
-                    } else {
-                        ++this.level;
-                        if (this.gameSpeed > InvadeConstants.MIN_GAME_SPEED) {
-                            this.gameSpeed += -1;
-                        }
-                    }
-
-                    this.gameStatus = InvadeConstants.STATE_PLAYING;
-
-                    for (this.i = 0; this.i < 5; ++this.i) {
-                        this.baddies[this.i] = 1;
-                        this.baddiex[this.i] = this.i * InvadeConstants.BADDIE_SPACING + 20;
-                        this.baddiey[this.i] = InvadeConstants.BADDIE_INITIAL_Y1;
-                        this.downer[this.i] = 0;
-                        this.speed[this.i] = rnd.nextInt(3) + 1;
-                    }
-
-                    for (this.i = 5; this.i < InvadeConstants.MAX_BADDIES; ++this.i) {
-                        this.baddies[this.i] = 1;
-                        this.baddiex[this.i] = (this.i - 5) * InvadeConstants.BADDIE_SPACING + 15 + 20;
-                        this.baddiey[this.i] = InvadeConstants.BADDIE_INITIAL_Y2;
-                        this.downer[this.i] = 0;
-                        this.speed[this.i] = rnd.nextInt(3) + 1;
-                    }
-
-                    this.deadBaddies = 0;
-                } else if (this.bx[this.bullet] == -1) {
-                    this.bx[this.bullet] = this.sx + InvadeConstants.PLAYER_HEIGHT;
-                    this.by[this.bullet] = this.sy - 10;
-                    ++this.bullet;
-                    this.bullet %= 30;
-                }
-
-            }
-            return true;
-        } else if (evt.id != 401 && evt.id != Event.DOWN && evt.id != Event.UP &&
-                evt.id != Event.LEFT && evt.id != Event.RIGHT) {
-            return true;
-        } else if (evt.key != 10) {
-            if (evt.key < 1000 && evt.key != 0) {
-                this.typedChar = (char) evt.key;
-                this.typed = evt.key;
-                if (evt.key == 8) {
-                    int len = this.typestring.length() - 1;
-                    if (len >= 0) {
-                        this.typestring = this.typestring.substring(0, len);
-                    }
-                } else {
-                    if (evt.key == 32) {
-                        evt.key = 65;
-                    }
-
-                    if (this.typestring.length() < InvadeConstants.MAX_NAME_LENGTH) {
-                        this.typestring = this.typestring + (char) evt.key;
-                    }
-                }
-            }
-
-            return true;
-        } else {
-            updateHighScores();
+        } else if (evt.getID() == MouseEvent.MOUSE_PRESSED) {
+            handleMousePress();
             return true;
         }
+        return false;
+    }
+
+    public boolean handleKeyEvent(KeyEvent evt) {
+        if (evt.getID() == KeyEvent.KEY_PRESSED) {
+            int keyCode = evt.getKeyCode();
+            if (keyCode == KeyEvent.VK_ENTER) {
+                updateHighScores();
+                return true;
+            } else if (keyCode != KeyEvent.VK_UP && keyCode != KeyEvent.VK_DOWN &&
+                    keyCode != KeyEvent.VK_LEFT && keyCode != KeyEvent.VK_RIGHT) {
+                handleKeyPress(evt);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void handleMousePress() {
+        if (this.gameStatus != InvadeConstants.STATE_NEW_HIGH_SCORE) {
+            if (this.gameStatus != InvadeConstants.STATE_PLAYING) {
+                initializeGame();
+            } else if (this.bx[this.bullet] == -1) {
+                fireBullet();
+            }
+        }
+    }
+
+    private void handleKeyPress(KeyEvent evt) {
+        char keyChar = evt.getKeyChar();
+        int keyCode = evt.getKeyCode();
+
+        if (keyCode == KeyEvent.VK_BACK_SPACE) {
+            if (!typestring.isEmpty()) {
+                typestring = typestring.substring(0, typestring.length() - 1);
+            }
+        } else if (keyChar != KeyEvent.CHAR_UNDEFINED && typestring.length() < InvadeConstants.MAX_NAME_LENGTH) {
+            if (keyChar == ' ') {
+                keyChar = 'A';
+            }
+            typestring += keyChar;
+        }
+
+        this.typedChar = keyChar;
+        this.typed = keyCode;
+    }
+
+    private void initializeGame() {
+        if (this.gameStatus == InvadeConstants.STATE_GAME_OVER) {
+            this.score = 0;
+            this.level = 0;
+            this.gameSpeed = InvadeConstants.INITIAL_GAME_SPEED;
+        } else {
+            ++this.level;
+            if (this.gameSpeed > InvadeConstants.MIN_GAME_SPEED) {
+                this.gameSpeed -= 1;
+            }
+        }
+
+        this.gameStatus = InvadeConstants.STATE_PLAYING;
+        initializeBaddies();
+    }
+
+    private void initializeBaddies() {
+        for (int k = 0; k < InvadeConstants.MAX_BADDIES; ++k) {
+            this.baddies[k] = 1;
+            this.baddiex[k] = (k % 5) * InvadeConstants.BADDIE_SPACING + 20;
+            this.baddiey[k] = (k < 5) ? InvadeConstants.BADDIE_INITIAL_Y1 : InvadeConstants.BADDIE_INITIAL_Y2;
+            this.downer[k] = 0;
+            this.speed[k] = rnd.nextInt(3) + 1;
+        }
+        this.deadBaddies = 0;
+    }
+
+    private void fireBullet() {
+        this.bx[this.bullet] = this.sx + InvadeConstants.PLAYER_HEIGHT;
+        this.by[this.bullet] = this.sy - 10;
+        ++this.bullet;
+        this.bullet %= 30;
     }
 
     private void updateHighScores() {
@@ -644,9 +640,9 @@ public class Invade extends Panel implements JavaAppletAdapter {
         String filePath = "scores.txt";  // Adjust this path as needed
         Properties scores = new Properties();
 
-        for (int i = 0; i < 10; i++) {
-            String key = "score" + i;
-            String value = highNames[i] + "=" + highScores[i];
+        for (int j = 0; j < 10; j++) {
+            String key = "score" + j;
+            String value = highNames[j] + "=" + highScores[j];
             scores.setProperty(key, value);
         }
 
@@ -655,5 +651,85 @@ public class Invade extends Panel implements JavaAppletAdapter {
         } catch (IOException e) {
             System.err.println("Error saving scores: " + e.getMessage());
         }
+    }
+
+    /**
+     * @param e the event to be processed
+     */
+    @Override
+    public void keyTyped(KeyEvent e) {
+        // unused
+    }
+
+    /**
+     * @param e the event to be processed
+     */
+    @Override
+    public void keyPressed(KeyEvent e) {
+        this.handleKeyEvent(e);
+    }
+
+    /**
+     * @param e the event to be processed
+     */
+    @Override
+    public void keyReleased(KeyEvent e) {
+        // unused
+    }
+
+    /**
+     * @param e the event to be processed
+     */
+    @Override
+    public void mouseClicked(MouseEvent e) {
+        // unused
+    }
+
+    /**
+     * @param e the event to be processed
+     */
+    @Override
+    public void mousePressed(MouseEvent e) {
+        this.handleMouseEvent(e);
+    }
+
+    /**
+     * @param e the event to be processed
+     */
+    @Override
+    public void mouseReleased(MouseEvent e) {
+        // unused
+    }
+
+    /**
+     * @param e the event to be processed
+     */
+    @Override
+    public void mouseEntered(MouseEvent e) {
+        // unused
+    }
+
+    /**
+     * @param e the event to be processed
+     */
+    @Override
+    public void mouseExited(MouseEvent e) {
+        // un-used
+    }
+
+    /**
+     * @param e the event to be processed
+     */
+    @Override
+    public void mouseDragged(MouseEvent e) {
+        // un-used
+    }
+
+    /**
+     * @param e the event to be processed
+     */
+    @Override
+    public void mouseMoved(MouseEvent e) {
+        this.handleMouseEvent(e);
     }
 }
