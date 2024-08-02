@@ -70,7 +70,7 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
     int[] by;
     Random rnd;
     private boolean bAllLoaded;
-    private Graphics m_Graphics;
+    private Graphics m_graphics;
     private int i;
     private int[] xs;
     private int[] ys;
@@ -82,18 +82,16 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
     private Graphics mG;
     private Dimension mDimImage;
 
+    // New variables for frame rate control
+    private long lastTime;
+    private static final double nsPerUpdate = 1000000000.0 / 60.0; // 60 updates per second
+
     /**
      *
      */
     public Invade() {
         this.rnd = new Random();
         this.fm = this.getFontMetrics(this.f2);
-        this.xs = new int[]{0, 0, 0};
-        this.ys = new int[]{10, 90, 170};
-        this.exs = new int[]{217, 266, 475, 368, 480, 325};
-        this.eys = new int[]{263, 353, 324, 273, 221, 196};
-        this.hxs = new int[]{98, 121, 320, 237, 345, 180};
-        this.hys = new int[]{160, 287, 222, 195, 131, 102};
         this.baddies = new int[InvadeConstants.MAX_BADDIES];
         this.baddiex = new int[InvadeConstants.MAX_BADDIES];
         this.baddiey = new int[InvadeConstants.MAX_BADDIES];
@@ -104,6 +102,8 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
         this.starY = new int[InvadeConstants.MAX_STARS];
         this.bx = new int[InvadeConstants.MAX_BULLETS];
         this.by = new int[InvadeConstants.MAX_BULLETS];
+
+        lastTime = System.nanoTime();
     }
 
     /**
@@ -295,6 +295,16 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
      */
     @Override
     public void update(Graphics g) {
+        long now = System.nanoTime();
+        double delta = (now - lastTime) / nsPerUpdate;
+        if (delta >= 1) {
+            updateGameState();
+            lastTime = now;
+        }
+        paint(g);
+    }
+
+    public void updateGameState() {
         this.mG.setColor(new Color(15, 23, 52));
         this.mG.fillRect(0, 0, this.nWidth, this.nHeight);
 
@@ -310,7 +320,7 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
 
                 case InvadeConstants.STATE_GAME_OVER:
                     this.loadscores();
-                    updateHighScores();
+                    this.updateHighScores();
                     if (this.gameStatus != InvadeConstants.STATE_NEW_HIGH_SCORE) {
                         displayGameOver();
                         this.gameSpeed = InvadeConstants.INITIAL_GAME_SPEED;
@@ -326,26 +336,27 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
                     displayNewHighScore();
                     break;
 
+                default:
                 case InvadeConstants.STATE_HIGH_SCORES:
                     displayHighScores();
                     break;
             }
         }
 
-        this.paint(g);
+
     }
     private void displayHighScores() {
         this.mG.setColor(new Color(255, 71, 84));
         this.mG.setFont(this.f2);
         this.mG.drawString("HIGH SCORES", 100, 20);
 
-        for (int i = 0; i < 10; i++) {
-            if (i < 9) {
-                this.mG.drawString(" " + (i + 1) + "  -  " + this.highNames[i], 80, 60 + i * 19);
+        for (int j = 0; j < 10; j++) {
+            if (j < 9) {
+                this.mG.drawString(" " + (j + 1) + "  -  " + this.highNames[j], 80, 60 + j * 19);
             } else {
-                this.mG.drawString((i + 1) + "  -  " + this.highNames[i], 75, 60 + i * 19);
+                this.mG.drawString((j + 1) + "  -  " + this.highNames[j], 75, 60 + j * 19);
             }
-            this.mG.drawString(" - " + this.highScores[i], 200, 60 + i * 19);
+            this.mG.drawString(" - " + this.highScores[j], 200, 60 + j * 19);
         }
 
         this.mG.drawString("Click to Play", 110, 290);
@@ -360,8 +371,8 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
     }
 
     private void resetLevel() {
-        for (int i = 0; i < 30; i++) {
-            this.bx[i] = -1;
+        for (int k = 0; k < 30; k++) {
+            this.bx[k] = -1;
         }
     }
 
@@ -369,7 +380,7 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
         this.mG.setColor(new Color(255, 71, 84));
         this.mG.drawString("A NEW HIGH SCORE", 0, 50);
         this.mG.drawString("TYPE HERE > ", 0, 110);
-        this.mG.drawString(" " + this.typestring + "<", 120, 110);
+        this.mG.drawString("" + this.typestring + "<", 120, 110);
     }
 
     private void displayLevelComplete() {
@@ -408,7 +419,7 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
     public void run() {
         if (!this.bAllLoaded) {
             this.repaint();
-            this.m_Graphics = this.getGraphics();
+            this.m_graphics = this.getGraphics();
             MediaTracker mediaTracker = new MediaTracker(this);
             this.pImages[0] = this.getImage(this.getDocumentBase(), InvadeConstants.PROFILE_IMAGE);
             mediaTracker.addImage(this.pImages[0], 0);
@@ -527,7 +538,7 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
         if (evt.getID() == KeyEvent.KEY_PRESSED) {
             int keyCode = evt.getKeyCode();
             if (keyCode == KeyEvent.VK_ENTER) {
-                updateHighScores();
+                this.updateHighScores();
                 return true;
             } else if (keyCode != KeyEvent.VK_UP && keyCode != KeyEvent.VK_DOWN &&
                     keyCode != KeyEvent.VK_LEFT && keyCode != KeyEvent.VK_RIGHT) {
@@ -637,7 +648,7 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
     }
 
     public void savescores() {
-        String filePath = "scores.txt";  // Adjust this path as needed
+        String filePath = InvadeConstants.SCORES_FILE;
         Properties scores = new Properties();
 
         for (int j = 0; j < 10; j++) {
