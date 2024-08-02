@@ -22,6 +22,13 @@
         </pluginRepository>
     </pluginRepositories>
 
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
+
     <build>
         <plugins>
             <plugin>
@@ -122,9 +129,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>dev.jcps</groupId>
-            <artifactId>appletwrapperframework</artifactId>
-            <version>0.1.7</version>
+            <groupId>com.github.Java-Code-Phoenix-Society</groupId>
+            <artifactId>AWF</artifactId>
+            <version>88d8644abc</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -135,7 +142,7 @@
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-swing-junit</artifactId>
-            <version>3.17.1</version>
+            <version>3.17.2-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
