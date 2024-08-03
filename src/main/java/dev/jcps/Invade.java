@@ -5,11 +5,10 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.Random;
-
-import static dev.jcps.InvadeConstants.SCORE_DISPLAY_LENGTH;
 
 /**
  * The main class for the Invade game.
@@ -19,18 +18,15 @@ import static dev.jcps.InvadeConstants.SCORE_DISPLAY_LENGTH;
  * <p>See {@link JavaAppletAdapter}</p>
  */
 public class Invade extends Panel implements JavaAppletAdapter, MouseListener, MouseMotionListener, KeyListener {
+    private static final double NS_PER_UPDATE = 1000000000.0 / 60.0; // 60 updates per second
     private final int[] sinx = new int[InvadeConstants.SIN_TABLE_SIZE];
-    private final Image[] pImages = new Image[InvadeConstants.NUM_IMAGES];
+    private final transient Image[] pImages = new Image[InvadeConstants.NUM_IMAGES];
     private final int[] baddies;
     private final int[] baddiex;
     private final int[] baddiey;
     private final int[] downer;
     private final int[] speed;
     int aaa;
-    int t;
-    int n;
-    String ts;
-    String ns;
     int totalBaddies;
     int deadBaddies;
     int baddieDraw;
@@ -70,27 +66,17 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
     int[] by;
     Random rnd;
     private boolean bAllLoaded;
-    private Graphics m_graphics;
     private int i;
-    private int[] xs;
-    private int[] ys;
-    private int[] exs;
-    private int[] eys;
-    private int[] hxs;
-    private int[] hys;
-    private Image mImage;
-    private Graphics mG;
+    private transient Image mImage;
+    private transient Graphics mG;
     private Dimension mDimImage;
-
-    // New variables for frame rate control
     private long lastTime;
-    private static final double nsPerUpdate = 1000000000.0 / 60.0; // 60 updates per second
 
     /**
      *
      */
     public Invade() {
-        this.rnd = new Random();
+        this.rnd = new SecureRandom();
         this.fm = this.getFontMetrics(this.f2);
         this.baddies = new int[InvadeConstants.MAX_BADDIES];
         this.baddiex = new int[InvadeConstants.MAX_BADDIES];
@@ -147,107 +133,121 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
      * The main game loop function
      */
     public void gameloop() {
-        int[] stars;
-        int it;
-        for (this.i = 0; this.i < 30; ++this.i) {
-            this.mG.drawImage(this.pImages[4], this.starX[this.i], this.starY[this.i], null);
-            this.starY[this.i]++;
-            stars = this.starY;
-            it = this.i;
-            stars[it] %= this.nHeight;
-            if (this.bx[this.i] != -1) {
-                for (this.ii = 0; this.ii < InvadeConstants.MAX_BADDIES; ++this.ii) {
-                    if (this.baddies[this.ii] == 1 && this.bx[this.i] >= this.baddiex[this.ii] + this.dance &&
-                            this.bx[this.i] <= this.baddiex[this.ii] + InvadeConstants.BADDIE_WIDTH + this.dance &&
-                            this.by[this.i] >= this.baddiey[this.ii] + this.downer[this.ii] &&
-                            this.by[this.i] <= this.baddiey[this.ii] + InvadeConstants.BADDIE_HEIGHT + this.downer[this.ii]) {
-                        this.baddies[this.ii] = 0;
-                        this.bx[this.i] = -1;
-                        this.score += InvadeConstants.SCORE_PER_BADDIE;
-                        ++this.deadBaddies;
-                        if (this.deadBaddies == this.totalBaddies) {
-                            this.gameStatus = InvadeConstants.STATE_LEVEL_COMPLETE;
-                        }
-                    }
-                }
-            }
+        updateStars();
+        updateBullets();
+        updateBaddies();
+        checkCollisions();
+        updatePlayer();
+        drawScore();
+    }
 
-            if (this.bx[this.i] != -1) {
-                this.mG.drawImage(this.pImages[5], this.bx[this.i], this.by[this.i], null);
-                stars = this.by;
-                it = this.i;
-                stars[it] -= 4;
-                if (this.by[this.i] < 0) {
-                    this.bx[this.i] = -1;
+    private void updateStars() {
+        for (int j = 0; j < 30; j++) {
+            mG.drawImage(pImages[4], starX[j], starY[j], null);
+            starY[j] = (starY[j] + 1) % nHeight;
+        }
+    }
+
+    private void updateBullets() {
+        for (int j = 0; j < 30; j++) {
+            if (bx[j] != -1) {
+                mG.drawImage(pImages[5], bx[j], by[j], null);
+                by[j] -= 4;
+                if (by[j] < 0) {
+                    bx[j] = -1;
                 }
             }
         }
+    }
 
-        if (this.baddieDraw == 0) {
-            this.dance = this.sinx[this.stance];
-            ++this.stance;
-            this.stance %= InvadeConstants.BADDIE_HEIGHT;
+    private void updateBaddies() {
+        if (baddieDraw == 0) {
+            dance = sinx[stance];
+            stance = (stance + 1) % InvadeConstants.BADDIE_HEIGHT;
         }
+        baddieDraw = (baddieDraw + 1) % gameSpeed;
 
-        ++this.baddieDraw;
-        this.baddieDraw %= this.gameSpeed;
-
-        for (this.i = 0; this.i < InvadeConstants.MAX_BADDIES; ++this.i) {
-            if (this.baddies[this.i] == 1) {
-                this.mG.drawImage(this.pImages[6], this.baddiex[this.i] + this.dance,
-                        this.baddiey[this.i] + this.downer[this.i], null);
-                if (this.baddiey[this.i] + this.downer[this.i] > this.nHeight) {
-                    this.baddiey[this.i] = InvadeConstants.BADDIE_INITIAL_Y2;
-                    this.downer[this.i] = 0;
-                    this.speed[this.i] = rnd.nextInt(3) + 1;
-                    this.baddiex[this.i] = rnd.nextInt(this.nWidth) + 1;
+        for (int j = 0; j < InvadeConstants.MAX_BADDIES; j++) {
+            if (baddies[j] == 1) {
+                mG.drawImage(pImages[6], baddiex[j] + dance, baddiey[j] + downer[j], null);
+                if (baddieDraw == 0) {
+                    downer[j] += speed[j];
                 }
-
-                if (this.baddiex[this.i] + this.dance > this.sx &&
-                        this.baddiex[this.i] + this.dance < this.sx + InvadeConstants.PLAYER_WIDTH &&
-                        this.baddiey[this.i] + this.downer[this.i] + InvadeConstants.BADDIE_HEIGHT > this.sy &&
-                        this.baddiey[this.i] + this.downer[this.i] + InvadeConstants.BADDIE_HEIGHT < this.sy + InvadeConstants.PLAYER_HEIGHT &&
-                        this.baddies[this.i] != -1) {
-                    this.gameStatus = InvadeConstants.STATE_GAME_OVER;
-                }
-
-                if (this.baddiex[this.i] + this.dance + 25 > this.sx &&
-                        this.baddiex[this.i] + this.dance + 25 < this.sx + InvadeConstants.PLAYER_WIDTH &&
-                        this.baddiey[this.i] + this.downer[this.i] + InvadeConstants.BADDIE_HEIGHT > this.sy &&
-                        this.baddiey[this.i] + this.downer[this.i] + InvadeConstants.BADDIE_HEIGHT < this.sy + InvadeConstants.PLAYER_HEIGHT &&
-                        this.baddies[this.i] != -1) {
-                    this.gameStatus = InvadeConstants.STATE_GAME_OVER;
-                }
-
-                if (this.baddiex[this.i] + this.dance > this.sx &&
-                        this.baddiex[this.i] + this.dance < this.sx + InvadeConstants.PLAYER_WIDTH &&
-                        this.baddiey[this.i] + this.downer[this.i] > this.sy &&
-                        this.baddiey[this.i] + this.downer[this.i] < this.sy + InvadeConstants.PLAYER_HEIGHT &&
-                        this.baddies[this.i] != -1) {
-                    this.gameStatus = InvadeConstants.STATE_GAME_OVER;
-                }
-
-                if (this.baddiex[this.i] + this.dance + 25 > this.sx &&
-                        this.baddiex[this.i] + this.dance + 25 < this.sx + InvadeConstants.PLAYER_WIDTH &&
-                        this.baddiey[this.i] + this.downer[this.i] > this.sy &&
-                        this.baddiey[this.i] + this.downer[this.i] < this.sy + InvadeConstants.PLAYER_HEIGHT &&
-                        this.baddies[this.i] != -1) {
-                    this.gameStatus = InvadeConstants.STATE_GAME_OVER;
+                if (baddiey[j] + downer[j] > nHeight) {
+                    resetBaddie(j);
                 }
             }
+        }
+    }
 
-            if (this.baddieDraw == 0) {
-                stars = this.downer;
-                it = this.i;
-                stars[it] += this.speed[this.i];
+    private void resetBaddie(int index) {
+        baddiey[index] = InvadeConstants.BADDIE_INITIAL_Y2;
+        downer[index] = 0;
+        speed[index] = rnd.nextInt(3) + 1;
+        baddiex[index] = rnd.nextInt(nWidth) + 1;
+    }
+
+    private void checkCollisions() {
+        for (int j = 0; j < 30; j++) {
+            if (bx[j] != -1) {
+                checkBulletCollision(j);
             }
         }
 
-        this.mG.drawImage(this.pImages[this.aaa], this.sx, this.sy, null);
-        ++this.aaa;
-        this.aaa %= 4;
-        this.mG.setColor(new Color(255, 71, 84));
-        this.mG.drawString(" Score : " + this.score + "    Level : " + this.level, 0, 10);
+        for (int j = 0; j < InvadeConstants.MAX_BADDIES; j++) {
+            if (baddies[j] == 1 && checkPlayerCollision(j)) {
+                gameStatus = InvadeConstants.STATE_GAME_OVER;
+                return;
+            }
+        }
+    }
+
+    private void checkBulletCollision(int bulletIndex) {
+        for (int j = 0; j < InvadeConstants.MAX_BADDIES; j++) {
+            if (baddies[j] == 1 && isBulletHittingBaddie(bulletIndex, j)) {
+                baddies[j] = 0;
+                bx[bulletIndex] = -1;
+                score += InvadeConstants.SCORE_PER_BADDIE;
+                deadBaddies++;
+                if (deadBaddies == totalBaddies) {
+                    gameStatus = InvadeConstants.STATE_LEVEL_COMPLETE;
+                }
+                return;
+            }
+        }
+    }
+
+    private boolean isBulletHittingBaddie(int bulletIndex, int baddieIndex) {
+        return bx[bulletIndex] >= baddiex[baddieIndex] + dance &&
+                bx[bulletIndex] <= baddiex[baddieIndex] + InvadeConstants.BADDIE_WIDTH + dance &&
+                by[bulletIndex] >= baddiey[baddieIndex] + downer[baddieIndex] &&
+                by[bulletIndex] <= baddiey[baddieIndex] + InvadeConstants.BADDIE_HEIGHT + downer[baddieIndex];
+    }
+
+    private boolean checkPlayerCollision(int baddieIndex) {
+        int baddieLeft = baddiex[baddieIndex] + dance;
+        int baddieRight = baddieLeft + InvadeConstants.BADDIE_WIDTH;
+        int baddieTop = baddiey[baddieIndex] + downer[baddieIndex];
+        int baddieBottom = baddieTop + InvadeConstants.BADDIE_HEIGHT;
+
+        return (isOverlapping(baddieLeft, baddieTop, baddieBottom) ||
+                isOverlapping(baddieRight, baddieTop, baddieBottom));
+    }
+
+    private boolean isOverlapping(int x, int top, int bottom) {
+        return x > sx && x < sx + InvadeConstants.PLAYER_WIDTH &&
+                ((top > sy && top < sy + InvadeConstants.PLAYER_HEIGHT) ||
+                        (bottom > sy && bottom < sy + InvadeConstants.PLAYER_HEIGHT));
+    }
+
+    private void updatePlayer() {
+        mG.drawImage(pImages[aaa], sx, sy, null);
+        aaa = (aaa + 1) % 4;
+    }
+
+    private void drawScore() {
+        mG.setColor(new Color(255, 71, 84));
+        mG.drawString(" Score : " + score + "    Level : " + level, 0, 10);
     }
 
     /**
@@ -296,7 +296,7 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
     @Override
     public void update(Graphics g) {
         long now = System.nanoTime();
-        double delta = (now - lastTime) / nsPerUpdate;
+        double delta = (now - lastTime) / NS_PER_UPDATE;
         if (delta >= 1) {
             updateGameState();
             lastTime = now;
@@ -319,8 +319,7 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
                     break;
 
                 case InvadeConstants.STATE_GAME_OVER:
-                    this.loadscores();
-                    this.updateHighScores();
+                    checkForHighScore();
                     if (this.gameStatus != InvadeConstants.STATE_NEW_HIGH_SCORE) {
                         displayGameOver();
                         this.gameSpeed = InvadeConstants.INITIAL_GAME_SPEED;
@@ -342,9 +341,28 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
                     break;
             }
         }
-
-
     }
+
+    private void checkForHighScore() {
+        for (int l = 0; l < InvadeConstants.MAX_HIGH_SCORES; l++) {
+            if (this.score > this.highScores[l]) {
+                // Shift down lower scores
+                for (int j = InvadeConstants.MAX_HIGH_SCORES - 1; j > l; j--) {
+                    this.highScores[j] = this.highScores[j - 1];
+                    this.highNames[j] = this.highNames[j - 1];
+                }
+                this.highScores[l] = this.score;
+                this.newHighScore = l;
+                this.gameStatus = InvadeConstants.STATE_NEW_HIGH_SCORE;
+                this.typestring = "";
+                break;
+            }
+        }
+        if (this.gameStatus != InvadeConstants.STATE_NEW_HIGH_SCORE) {
+            this.loadscores();
+        }
+    }
+
     private void displayHighScores() {
         this.mG.setColor(new Color(255, 71, 84));
         this.mG.setFont(this.f2);
@@ -362,6 +380,7 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
         this.mG.drawString("Click to Play", 110, 290);
         this.mG.setFont(this.f);
     }
+
     private void displayGameOver() {
         this.mG.setColor(new Color(255, 71, 84));
         this.mG.setFont(this.f2);
@@ -419,7 +438,6 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
     public void run() {
         if (!this.bAllLoaded) {
             this.repaint();
-            this.m_graphics = this.getGraphics();
             MediaTracker mediaTracker = new MediaTracker(this);
             this.pImages[0] = this.getImage(this.getDocumentBase(), InvadeConstants.PROFILE_IMAGE);
             mediaTracker.addImage(this.pImages[0], 0);
@@ -563,15 +581,19 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
         char keyChar = evt.getKeyChar();
         int keyCode = evt.getKeyCode();
 
-        if (keyCode == KeyEvent.VK_BACK_SPACE) {
-            if (!typestring.isEmpty()) {
-                typestring = typestring.substring(0, typestring.length() - 1);
+        if (this.gameStatus == InvadeConstants.STATE_NEW_HIGH_SCORE) {
+            if (keyCode == KeyEvent.VK_ENTER) {
+                this.updateHighScores();
+            } else if (keyCode == KeyEvent.VK_BACK_SPACE) {
+                if (!typestring.isEmpty()) {
+                    typestring = typestring.substring(0, typestring.length() - 1);
+                }
+            } else if (keyChar != KeyEvent.CHAR_UNDEFINED && typestring.length() < InvadeConstants.MAX_NAME_LENGTH) {
+                if (keyChar == ' ') {
+                    keyChar = '_';
+                }
+                typestring += keyChar;
             }
-        } else if (keyChar != KeyEvent.CHAR_UNDEFINED && typestring.length() < InvadeConstants.MAX_NAME_LENGTH) {
-            if (keyChar == ' ') {
-                keyChar = 'A';
-            }
-            typestring += keyChar;
         }
 
         this.typedChar = keyChar;
@@ -613,30 +635,10 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
     }
 
     private void updateHighScores() {
-        try {
-            this.highNames[this.newHighScore] = this.typestring;
-        } catch (Exception e) {
-            // Just a loop fail-safe
-        }
+        this.highNames[this.newHighScore] = this.typestring;
         this.gameStatus = InvadeConstants.STATE_HIGH_SCORES;
-        this.bigString = "";
-        this.ii = 1;
-        StringBuilder sb = new StringBuilder();
-
-        for (this.i = 0; this.i < 10; ++this.i) {
-            String scoresText = this.highNames[this.i] + "---------";
-            int sl;
-            String cName = scoresText.substring(0, InvadeConstants.MAX_NAME_LENGTH);
-            sb.append(cName);
-            scoresText = "00000" + this.highScores[this.i];
-            sl = scoresText.length();
-            cName = scoresText.substring(sl - SCORE_DISPLAY_LENGTH,
-                    sl - SCORE_DISPLAY_LENGTH + SCORE_DISPLAY_LENGTH);
-            sb.append(cName).append(this.ii);
-        }
-
-        this.bigString = sb.toString();
-        this.newHighScore = 99;
+        this.saveScores();
+        this.newHighScore = -1;
         this.score = 0;
         this.level = 0;
         this.typestring = "";
@@ -644,10 +646,9 @@ public class Invade extends Panel implements JavaAppletAdapter, MouseListener, M
         for (this.i = 0; this.i < 30; ++this.i) {
             this.bx[this.i] = -1;
         }
-        this.savescores();
     }
 
-    public void savescores() {
+    public void saveScores() {
         String filePath = InvadeConstants.SCORES_FILE;
         Properties scores = new Properties();
 
