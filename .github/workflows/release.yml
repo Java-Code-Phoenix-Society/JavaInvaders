@@ -56,21 +56,13 @@ jobs:
 
       - name: Create GitHub Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: ncipollo/release-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ env.VERSION }}
-          release_name: Release (v${{ env.VERSION }})
+          tag: v${{ env.VERSION }}
+          name: Release (v${{ env.VERSION }})
           draft: false
           prerelease: false
-
-      - name: Upload JAR to Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: JavaInvaders-${{ env.VERSION }}-full.jar
-          asset_name: JavaInvaders-${{ env.VERSION }}-full.jar
-          asset_content_type: application/java-archive
+          artifacts: JavaInvaders-${{ env.VERSION }}-full.jar
+          artifactContentType: application/java-archive
