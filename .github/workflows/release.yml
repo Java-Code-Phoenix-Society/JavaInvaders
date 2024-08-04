@@ -2,8 +2,7 @@ name: Build and Release JAR
 
 on:
   push:
-    tags:
-      - 'v*.*.*'  # Trigger the workflow on version tags
+    branches: [ main ]
 
 permissions:
   packages: write
@@ -50,12 +49,17 @@ jobs:
           name: JavaInvaders
 
       - name: Create GitHub Release
-        uses: elgohr/Github-Release-Action@v5
+        id: create_release
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          title: Release ${{ github.ref }} (v${{ env.VERSION }})
+          tag_name: v${{ steps.get_version.outputs.VERSION }}
+          release_name: Release v${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+
 
       - name: Upload JAR to Release
         uses: actions/upload-release-asset@v1
