@@ -50,11 +50,19 @@ jobs:
           name: JavaInvaders
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: elgohr/Github-Release-Action@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          name: Release ${{ github.ref }} (v${{ env.VERSION }})
-          files: ./target/JavaInvaders-${{ env.VERSION }}-full.jar
+          title: Release ${{ github.ref }} (v${{ env.VERSION }})
+
+      - name: Upload JAR to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: target/JavaInvaders-${{ env.VERSION }}.jar
+          asset_name: JavaInvaders-${{ env.VERSION }}.jar
+          asset_content_type: application/java-archive
