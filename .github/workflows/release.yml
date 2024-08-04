@@ -54,11 +54,6 @@ jobs:
         with:
           name: JavaInvaders
 
-      - name: list directories
-        run: |
-          ls .
-          ls ./target
-
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
