@@ -56,8 +56,8 @@ jobs:
 
       - name: list directories
         run: |
-          ls ./target
           ls .
+          ls ./target
 
       - name: Create GitHub Release
         id: create_release
@@ -76,6 +76,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./target/JavaInvaders-${{ env.VERSION }}-full.jar
+          asset_path: JavaInvaders-${{ env.VERSION }}-full.jar
           asset_name: JavaInvaders-${{ env.VERSION }}-full.jar
           asset_content_type: application/java-archive
